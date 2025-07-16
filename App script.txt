@@ -62,7 +62,7 @@ const CONFIG = {
     }
   },
   notification: {
-      backendServerUrl: "https://webput.onrender.com/send-notification"
+      backendServerUrl: "https://re-l1qo.onrender.com/send-notification"
   }
 };
 
