@@ -2,11 +2,10 @@
 <html lang="th" class="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ระบบแจ้งปัญหา</title>
 
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#3b82f6"/>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="description" content="เว็บแอปพลิเคชันสำหรับแจ้งปัญหา">
@@ -96,6 +95,31 @@
                 height: 100%;
             }
         }
+
+        /* Add padding to the bottom of main content on mobile to prevent overlap with the fixed nav bar */
+        @media (max-width: 639px) {
+            #main-app-page main {
+                padding-bottom: 6rem; /* A bit more than the nav bar height */
+            }
+            /* Handle safe area for bottom navigation on modern phones */
+            #bottom-nav > div {
+                padding-bottom: env(safe-area-inset-bottom);
+                height: calc(4rem + env(safe-area-inset-bottom));
+            }
+        }
+        
+        /* Handle safe area for top header on modern phones */
+        header {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        /* FIX: Add safe area padding for the full-screen technician dashboard modal on mobile */
+        #tech-dashboard-modal > div {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -145,7 +169,7 @@
         <!-- Main App Page (Requester & Admin) -->
         <div id="main-app-page" class="hidden">
             <!-- Header -->
-            <header class="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-40 backdrop-blur-lg">
+            <header class="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-40">
                 <div class="container mx-auto px-4 py-3">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
@@ -180,53 +204,6 @@
 
             <!-- Main Content -->
             <main class="container mx-auto p-3 sm:p-4 md:p-6 relative">
-                <!-- Requester View -->
-                <div id="requester-view">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <div class="flex items-center gap-3 self-start w-full sm:w-auto">
-                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">รายการแจ้งปัญหาของคุณ</h2>
-                            <button id="desktop-refresh-btn-requester" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="รีเฟรชรายการ">
-                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                        <!-- Desktop Button -->
-                        <button id="open-request-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-blue-700 transition-all duration-300 hidden sm:flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-blue-500/30">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                            <span>แจ้งปัญหาใหม่</span>
-                        </button>
-                    </div>
-
-                    <!-- Mobile Action Buttons for Requester -->
-                    <div class="grid grid-cols-2 gap-3 mb-6 sm:hidden">
-                        <button id="toggle-requester-filters-btn" class="flex items-center justify-center gap-2 p-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors">
-                            <i data-lucide="search" class="w-5 h-5"></i>
-                            <span>ค้นหา</span>
-                        </button>
-                        <button id="open-request-modal-btn-requester-mobile" class="flex items-center justify-center gap-2 p-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                            <span>แจ้งใหม่</span>
-                        </button>
-                    </div>
-
-                    <!-- Requester Filters -->
-                    <div id="requester-filters-container" class="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700 hidden sm:block">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                            <input type="text" id="requester-search-problem" placeholder="ค้นหาตามชื่อปัญหา..." class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <input type="date" id="requester-search-date" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <select id="requester-search-category" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">ทุกหมวดหมู่</option>
-                            </select>
-                            <button id="requester-filter-btn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 flex items-center justify-center gap-2">
-                                <i data-lucide="search" class="w-4 h-4"></i>
-                                <span>ค้นหา</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="requester-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        <!-- Requester items will be injected here -->
-                    </div>
-                </div>
-
                 <!-- Admin/Technician View -->
                 <div id="admin-view" class="hidden">
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
@@ -237,10 +214,14 @@
                             </button>
                         </div>
                         <!-- Desktop Buttons -->
-                        <div class="hidden sm:flex items-center gap-2">
+                        <div class="hidden sm:flex items-center gap-3">
+                             <button id="show-my-requests-btn" class="bg-blue-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-blue-500/30">
+                                <i data-lucide="user" class="w-5 h-5"></i>
+                                <span>รายการแจ้งของคุณ</span>
+                            </button>
                              <button id="show-tech-dashboard-btn" class="hidden bg-purple-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-purple-500/30">
                                 <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                                <span>แดชบอร์ดช่าง/ผู้จัดการ</span>
+                                <span>แดชบอร์ดช่าง</span>
                             </button>
                             <button id="open-request-modal-btn-admin" class="bg-green-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-green-500/30">
                                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
@@ -248,20 +229,12 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- REVISED: Mobile Action Buttons -->
-                    <div id="admin-mobile-actions" class="grid gap-3 mb-6 sm:hidden">
-                        <button id="toggle-admin-filters-btn" class="flex items-center justify-center gap-2 p-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors">
+                    
+                    <!-- Mobile Search Button -->
+                    <div class="sm:hidden mb-4">
+                        <button id="toggle-admin-filters-btn" class="w-full flex items-center justify-center gap-2 p-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <i data-lucide="search" class="w-5 h-5"></i>
-                            <span>ค้นหา</span>
-                        </button>
-                        <button id="show-tech-dashboard-btn-mobile" class="hidden flex items-center justify-center gap-2 p-3 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
-                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                            <span>แดชบอร์ด</span>
-                        </button>
-                        <button id="open-request-modal-btn-admin-mobile" class="flex items-center justify-center gap-2 p-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                            <span>แจ้งใหม่</span>
+                            <span>ค้นหาและกรองข้อมูล</span>
                         </button>
                     </div>
 
@@ -316,7 +289,89 @@
                        <!-- Admin items will be injected here -->
                     </div>
                 </div>
+
+                <!-- Requester View (for all users) -->
+                <div id="requester-view" class="hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <div class="flex items-center gap-3 self-start w-full sm:w-auto">
+                             <!-- NEW: Back button for Admins/Techs -->
+                            <button id="back-to-dashboard-btn" class="hidden sm:flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 mr-4">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                กลับไปแดชบอร์ด
+                            </button>
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">รายการแจ้งของคุณ</h2>
+                            <button id="desktop-refresh-btn-requester" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="รีเฟรชรายการ">
+                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <!-- Desktop Button -->
+                        <button id="open-request-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-blue-700 transition-all duration-300 hidden sm:flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-blue-500/30">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>แจ้งปัญหาใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Action Buttons for Requester -->
+                    <div class="grid grid-cols-2 gap-3 mb-6 sm:hidden">
+                        <button id="toggle-requester-filters-btn" class="flex items-center justify-center gap-2 p-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                            <span>ค้นหา</span>
+                        </button>
+                        <button id="open-request-modal-btn-requester-mobile" class="flex items-center justify-center gap-2 p-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>แจ้งใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Requester Filters -->
+                    <div id="requester-filters-container" class="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700 hidden sm:block">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <input type="text" id="requester-search-problem" placeholder="ค้นหาตามชื่อปัญหา..." class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <input type="date" id="requester-search-date" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select id="requester-search-category" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">ทุกหมวดหมู่</option>
+                            </select>
+                            <button id="requester-filter-btn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>ค้นหา</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="requester-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <!-- Requester items will be injected here -->
+                    </div>
+                </div>
             </main>
+
+            <!-- Bottom Navigation Menu (for Admin/Tech on Mobile) -->
+            <div id="bottom-nav" class="hidden">
+                <div class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center shadow-[0_-2px_5px_rgba(0,0,0,0.05)]">
+                    
+                    <!-- Dashboard Link -->
+                    <button id="nav-dashboard-btn" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full h-full pt-2">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6 mb-1"></i>
+                        <span class="text-xs font-medium">แดชบอร์ด</span>
+                    </button>
+            
+                    <!-- My Requests Link -->
+                    <button id="nav-my-requests-btn" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full h-full pt-2">
+                        <i data-lucide="user" class="w-6 h-6 mb-1"></i>
+                        <span class="text-xs font-medium">ของฉัน</span>
+                    </button>
+            
+                    <!-- Technician Dashboard Link (Admin Only) -->
+                    <button id="nav-tech-dashboard-btn" class="hidden flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors w-full h-full pt-2">
+                        <i data-lucide="briefcase" class="w-6 h-6 mb-1"></i>
+                        <span class="text-xs font-medium">แดชบอร์ดช่าง</span>
+                    </button>
+
+                    <!-- New Request Button -->
+                    <button id="nav-new-request-btn" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors w-full h-full pt-2">
+                        <i data-lucide="plus-circle" class="w-6 h-6 mb-1"></i>
+                        <span class="text-xs font-medium">แจ้งใหม่</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -520,7 +575,7 @@
         <div id="tech-dashboard-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity duration-300">
             <div class="bg-white dark:bg-gray-800 w-full h-full sm:w-full sm:max-w-6xl sm:rounded-2xl sm:shadow-xl sm:max-h-[90vh] flex flex-col">
                 <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-                    <h3 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">แดชบอร์ด</h3>
+                    <h3 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">แดชบอร์ดช่าง</h3>
                     <button type="button" class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                         <i data-lucide="x" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
                     </button>
@@ -582,7 +637,7 @@
         // =================================================================================
         // CONFIGURATION
         // =================================================================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxDFrcak-44cf8NmVUC-msT3D3gHLNc7FYowvJ_25qBVMVnWqr75xRIHvTSEQPZFewx/exec";
+         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxDFrcak-44cf8NmVUC-msT3D3gHLNc7FYowvJ_25qBVMVnWqr75xRIHvTSEQPZFewx/exec";
         const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dwa3hxmf6/image/upload";
         const CLOUDINARY_UPLOAD_PRESET = "SafetyRE";
         const BACKEND_SERVER_URL = "https://re-l1qo.onrender.com";
@@ -675,6 +730,16 @@
                 document.documentElement.classList.remove('dark');
             }
             localStorage.setItem('theme', theme);
+
+            // Update theme-color meta tag
+            let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+            if (!themeColorMeta) {
+                themeColorMeta = document.createElement('meta');
+                themeColorMeta.name = 'theme-color';
+                document.getElementsByTagName('head')[0].appendChild(themeColorMeta);
+            }
+            // Note: These colors should match the header's bg-white and dark:bg-gray-900
+            themeColorMeta.setAttribute('content', theme === 'dark' ? '#111827' : '#ffffff');
         }
 
         function handleThemeToggle() {
@@ -769,8 +834,6 @@
         // Mobile Admin Controls
         const toggleAdminFiltersBtn = document.getElementById('toggle-admin-filters-btn');
         const adminFiltersContainer = document.getElementById('admin-filters-container');
-        const openRequestModalBtnAdminMobile = document.getElementById('open-request-modal-btn-admin-mobile');
-        const showTechDashboardBtnMobile = document.getElementById('show-tech-dashboard-btn-mobile');
         // Mobile Requester Controls
         const toggleRequesterFiltersBtn = document.getElementById('toggle-requester-filters-btn');
         const requesterFiltersContainer = document.getElementById('requester-filters-container');
@@ -778,6 +841,15 @@
         // NEW: Refresh buttons
         const desktopRefreshBtnRequester = document.getElementById('desktop-refresh-btn-requester');
         const desktopRefreshBtnAdmin = document.getElementById('desktop-refresh-btn-admin');
+        // NEW: View Toggling Buttons
+        const showMyRequestsBtn = document.getElementById('show-my-requests-btn');
+        const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
+        // NEW: Bottom Navigation Elements
+        const bottomNav = document.getElementById('bottom-nav');
+        const navDashboardBtn = document.getElementById('nav-dashboard-btn');
+        const navMyRequestsBtn = document.getElementById('nav-my-requests-btn');
+        const navNewRequestBtn = document.getElementById('nav-new-request-btn');
+        const navTechDashboardBtn = document.getElementById('nav-tech-dashboard-btn');
 
 
         const showLoading = (show) => loadingOverlay.classList.toggle('hidden', !show);
@@ -994,10 +1066,8 @@
                 let data;
                 if (currentUser.isAdmin) {
                     data = await callGasApi({ action: 'getRequests', isAdmin: true });
-                    adminViewTitle.textContent = 'แดชบอร์ด';
                 } else if (currentUser.isTechnician) {
                     data = await callGasApi({ action: 'getRequests', isTechnician: true, employeeId: currentUser.id });
-                    adminViewTitle.textContent = 'แดชบอร์ด';
                 } else {
                     data = await callGasApi({ action: 'getRequests', requesterId: currentUser.id });
                 }
@@ -1005,12 +1075,12 @@
                 if (data) {
                     allRequests = data.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
                     
+                    const myReportedRequests = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
+                    renderRequests(myReportedRequests, requesterList, currentUser);
+
                     if (currentUser.isAdmin || currentUser.isTechnician) {
                         updateSummaryCards(allRequests);
                         renderRequests(allRequests, adminList, currentUser);
-                    } else { 
-                        const userRequests = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
-                        renderRequests(userRequests, requesterList, currentUser);
                     }
                 }
             } catch(error) {
@@ -1074,6 +1144,28 @@
             requesterSearchCategorySelect.insertAdjacentHTML('afterbegin', defaultOption);
             adminSearchCategorySelect.insertAdjacentHTML('afterbegin', defaultOption);
         }
+
+        function updateActiveNav(activeView) {
+            const isDashboard = activeView === 'dashboard';
+            
+            showElement(adminView, isDashboard);
+            showElement(requesterView, !isDashboard);
+
+            const isManagerOrAdmin = currentUser.isAdmin || currentUser.isTechnician;
+            showElement(backToDashboardBtn, !isDashboard && isManagerOrAdmin);
+
+            if (bottomNav) {
+                navDashboardBtn.classList.toggle('text-blue-600', isDashboard);
+                navDashboardBtn.classList.toggle('dark:text-blue-400', isDashboard);
+                navDashboardBtn.classList.toggle('text-gray-500', !isDashboard);
+                navDashboardBtn.classList.toggle('dark:text-gray-400', !isDashboard);
+
+                navMyRequestsBtn.classList.toggle('text-blue-600', !isDashboard);
+                navMyRequestsBtn.classList.toggle('dark:text-blue-400', !isDashboard);
+                navMyRequestsBtn.classList.toggle('text-gray-500', isDashboard);
+                navMyRequestsBtn.classList.toggle('dark:text-gray-400', isDashboard);
+            }
+        }
         
         async function initializeUserSession(user) {
             currentUser = user;
@@ -1084,23 +1176,27 @@
             
             notificationButton.classList.remove('hidden');
 
-            const isManager = currentUser.isAdmin || currentUser.isTechnician;
-            showElement(adminView, isManager); 
-            showElement(requesterView, !isManager); 
-            showElement(showTechDashboardBtn, currentUser.isAdmin); // Desktop button
+            const isManagerOrAdmin = currentUser.isAdmin || currentUser.isTechnician;
 
-            // Handle mobile admin buttons
-            if (isManager) {
-                const adminMobileActions = document.getElementById('admin-mobile-actions');
+            // --- View Visibility & Nav ---
+            showElement(adminView, isManagerOrAdmin);
+            showElement(requesterView, !isManagerOrAdmin);
+            showElement(backToDashboardBtn, false);
+
+            if (isManagerOrAdmin) {
+                adminViewTitle.textContent = currentUser.isAdmin ? 'แดชบอร์ด (ผู้ดูแลระบบ)' : 'แดชบอร์ด (ช่าง)';
+                showElement(showTechDashboardBtn, currentUser.isAdmin);
+                showElement(bottomNav, true);
+                
                 if (currentUser.isAdmin) {
-                    showElement(showTechDashboardBtnMobile, true);
-                    adminMobileActions.classList.add('grid-cols-3');
-                    adminMobileActions.classList.remove('grid-cols-2');
-                } else { // Is a technician but not an admin
-                    showElement(showTechDashboardBtnMobile, false);
-                    adminMobileActions.classList.add('grid-cols-2');
-                    adminMobileActions.classList.remove('grid-cols-3');
+                    showElement(navTechDashboardBtn, true);
+                } else {
+                    showElement(navTechDashboardBtn, false);
                 }
+
+                updateActiveNav('dashboard');
+            } else {
+                showElement(bottomNav, false);
             }
 
             await loadDashboardData();
@@ -1134,45 +1230,26 @@
             }
         });
 
-        // REVISED: Unsubscribe from push notifications in the background on logout
         logoutButton.addEventListener('click', () => {
-            // Define the unsubscription logic as a separate async function.
             const unsubscribeInBackground = async () => {
                 try {
-                    // Check for service worker and push manager support.
                     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-                    
                     const registration = await navigator.serviceWorker.ready;
                     const subscription = await registration.pushManager.getSubscription();
-                    
                     if (subscription) {
-                        // Tell the backend to remove the subscription record.
-                        // This is "fire and forget" - we don't wait for the response.
                         fetch(`${BACKEND_SERVER_URL}/remove-subscription`, {
                             method: 'POST',
                             body: JSON.stringify({ endpoint: subscription.endpoint }),
                             headers: { 'Content-Type': 'application/json' }
                         });
-                        
-                        // Unsubscribe from the browser's push service.
-                        const unsubscribed = await subscription.unsubscribe();
-                        if (unsubscribed) {
-                            console.log('User unsubscribed from push notifications in the background.');
-                        }
+                        await subscription.unsubscribe();
                     }
                 } catch (error) {
-                    console.error('Error during background push notification unsubscription:', error);
-                    // This error is silent to the user as they have already been logged out.
+                    console.error('Error during background push unsubscription:', error);
                 }
             };
-            
-            // Start the background unsubscription process.
             unsubscribeInBackground();
-
-            // Immediately clear the user's session data from local storage.
             localStorage.removeItem('currentUser');
-            
-            // Immediately reload the page to take the user to the login screen.
             window.location.reload();
         });
 
@@ -1326,12 +1403,10 @@
             const category = document.getElementById(categoryInputId).value;
             
             let sourceData;
-            if (currentUser.isAdmin) {
-                sourceData = allRequests;
-            } else if (currentUser.isTechnician) {
-                sourceData = allRequests.filter(req => String(req.assignedToId) === String(currentUser.id));
-            } else {
-                sourceData = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
+            if (isRequesterView) {
+                 sourceData = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
+            } else { // Admin view
+                 sourceData = allRequests;
             }
 
             const filtered = sourceData.filter(req => {
@@ -1478,7 +1553,6 @@
             }
         });
         
-        // NEW: Event listener for filtering within the technician dashboard
         techDashboardDetailsView.addEventListener('click', (e) => {
             const summaryCard = e.target.closest('.summary-card');
             if (!summaryCard) return;
@@ -1501,38 +1575,23 @@
         showTechDashboardBtn.addEventListener('click', showTechnicianDashboard);
 
         // --- Refresh Logic ---
-        if (desktopRefreshBtnRequester) {
-            desktopRefreshBtnRequester.addEventListener('click', () => loadDashboardData(true));
-        }
-        if (desktopRefreshBtnAdmin) {
-            desktopRefreshBtnAdmin.addEventListener('click', () => loadDashboardData(true));
-        }
+        desktopRefreshBtnRequester.addEventListener('click', () => loadDashboardData(true));
+        desktopRefreshBtnAdmin.addEventListener('click', () => loadDashboardData(true));
 
         // --- Mobile Button Logic ---
-        if (toggleAdminFiltersBtn) {
-            toggleAdminFiltersBtn.addEventListener('click', () => {
-                adminFiltersContainer.classList.toggle('hidden');
-            });
-        }
+        toggleAdminFiltersBtn.addEventListener('click', () => adminFiltersContainer.classList.toggle('hidden'));
+        toggleRequesterFiltersBtn.addEventListener('click', () => requesterFiltersContainer.classList.toggle('hidden'));
+        openRequestModalBtnRequesterMobile.addEventListener('click', () => showNewRequestModal(true));
 
-        if (openRequestModalBtnAdminMobile) {
-            openRequestModalBtnAdminMobile.addEventListener('click', () => showNewRequestModal(true));
-        }
-        
-        if (showTechDashboardBtnMobile) {
-            showTechDashboardBtnMobile.addEventListener('click', showTechnicianDashboard);
-        }
+        // --- View Toggling for Admins/Techs ---
+        showMyRequestsBtn.addEventListener('click', () => updateActiveNav('my-requests'));
+        backToDashboardBtn.addEventListener('click', () => updateActiveNav('dashboard'));
 
-        if (toggleRequesterFiltersBtn) {
-            toggleRequesterFiltersBtn.addEventListener('click', () => {
-                requesterFiltersContainer.classList.toggle('hidden');
-            });
-        }
-
-        if (openRequestModalBtnRequesterMobile) {
-            openRequestModalBtnRequesterMobile.addEventListener('click', () => showNewRequestModal(true));
-        }
-
+        // --- Bottom Nav Listeners ---
+        navDashboardBtn.addEventListener('click', () => updateActiveNav('dashboard'));
+        navMyRequestsBtn.addEventListener('click', () => updateActiveNav('my-requests'));
+        navNewRequestBtn.addEventListener('click', () => showNewRequestModal(true));
+        navTechDashboardBtn.addEventListener('click', showTechnicianDashboard);
 
         // --- Initial Load ---
         (async () => {
