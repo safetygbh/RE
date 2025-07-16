@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบแจ้งปัญหา</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="description" content="เว็บแอปพลิเคชันสำหรับแจ้งปัญหา">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        // Add dark mode support to tailwind
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'kanit': ['Kanit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* FIX: Ensure scrollbar only appears when content overflows */
+        html {
+            overflow-y: auto;
+        }
+
+        /* Use Kanit as the default font */
+        body {
+            font-family: 'Kanit', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
+        }
+        
+        /* Add this class to body when a modal is open to prevent background scrolling */
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        /* Custom scrollbar for a modern look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #7a7a7a; }
+        html.dark ::-webkit-scrollbar-track { background: #2d3748; }
+        html.dark ::-webkit-scrollbar-thumb { background: #4a5568; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #718096; }
+
+        /* Custom SVG Loader for loading overlay */
+        .svg-loader { animation: rotate 2s linear infinite; }
+        .svg-loader circle {
+            stroke-dasharray: 187;
+            stroke-dashoffset: 0;
+            transform-origin: center;
+            animation: dash 1.5s ease-in-out infinite;
+        }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+        @keyframes dash {
+            0% { stroke-dashoffset: 187; }
+            50% { stroke-dashoffset: 46.75; transform: rotate(135deg); }
+            100% { stroke-dashoffset: 187; transform: rotate(450deg); }
+        }
+        
+        /* Smooth transition for theme change */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Styles for mobile technician dashboard navigation */
+        @media (max-width: 767px) {
+            #tech-dashboard-modal.mobile-details-active #tech-dashboard-list-panel {
+                display: none;
+            }
+            #tech-dashboard-modal:not(.mobile-details-active) #tech-dashboard-details-view {
+                display: none;
+            }
+            #tech-dashboard-modal.mobile-details-active #tech-dashboard-details-view {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <!-- Main Application Container -->
+    <div id="app" class="min-h-screen">
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-white/70 dark:bg-black/70 z-[100] flex items-center justify-center hidden backdrop-blur-sm">
+            <svg class="svg-loader h-16 w-16" viewBox="0 0 64 64">
+                <circle class="path stroke-blue-600 dark:stroke-blue-500" cx="32" cy="32" r="28" fill="none" stroke-width="5"></circle>
+            </svg>
+        </div>
+
+        <!-- Login Page -->
+        <div id="login-page" class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-800">
+            <div class="w-full max-w-md bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-black/50">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 p-4 rounded-full mb-4">
+                        <i data-lucide="wrench" class="w-12 h-12 text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <h1 class="text-4xl font-bold text-gray-800 dark:text-white">แจ้งปัญหา</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">ระบบแจ้งปัญหา</p>
+                </div>
+                <form id="login-form">
+                    <div class="mb-5">
+                        <label for="employee-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">รหัสพนักงาน 10 หลัก</label>
+                        <input type="text" id="employee-id" name="employee-id" class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300" required maxlength="10" pattern="\d{10}" placeholder="กรอกรหัสพนักงาน...">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                        เข้าสู่ระบบ
+                    </button>
+                </form>
+                <p id="login-error" class="text-red-500 text-sm mt-4 text-center h-5"></p>
+                <div class="text-center mt-4">
+                    <a href="#" id="show-register-modal-btn" class="text-sm text-blue-600 hover:underline dark:text-blue-400">ยังไม่เคยใช้งาน? ลงทะเบียนที่นี่</a>
+                </div>
+            </div>
+             <div class="absolute top-4 right-4">
+                <button id="theme-toggle-login" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main App Page (Requester & Admin) -->
+        <div id="main-app-page" class="hidden">
+            <!-- Header -->
+            <header class="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-40 backdrop-blur-lg">
+                <div class="container mx-auto px-4 py-3">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-lg">
+                                <i data-lucide="wrench" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">แจ้งปัญหา</h1>
+                        </div>
+                        <div class="flex items-center gap-2 sm:gap-4">
+                            <button id="notification-btn" class="hidden p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" title="เปิดการแจ้งเตือน">
+                                <i data-lucide="bell" class="w-5 h-5"></i>
+                            </button>
+                            <button id="install-pwa-btn" class="hidden bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 font-bold py-2 px-3 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors flex items-center gap-2">
+                                <i data-lucide="download-cloud" class="w-5 h-5"></i>
+                                <span class="hidden md:inline">ติดตั้งแอป</span>
+                            </button>
+                            <button id="theme-toggle-main" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                                <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                            </button>
+                            <div id="user-info" class="text-right">
+                                <p class="font-semibold text-gray-800 dark:text-white truncate max-w-[100px] sm:max-w-xs" id="user-name-display"></p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400" id="user-id-display"></p>
+                            </div>
+                            <button id="logout-button" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="container mx-auto p-3 sm:p-4 md:p-6 relative">
+                <!-- Requester View -->
+                <div id="requester-view">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <div class="flex items-center gap-3 self-start w-full sm:w-auto">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">รายการแจ้งปัญหาของคุณ</h2>
+                            <button id="desktop-refresh-btn-requester" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="รีเฟรชรายการ">
+                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <!-- Desktop Button -->
+                        <button id="open-request-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-blue-700 transition-all duration-300 hidden sm:flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-blue-500/30">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>แจ้งปัญหาใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Action Buttons for Requester -->
+                    <div class="grid grid-cols-2 gap-3 mb-6 sm:hidden">
+                        <button id="toggle-requester-filters-btn" class="flex items-center justify-center gap-2 p-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                            <span>ค้นหา</span>
+                        </button>
+                        <button id="open-request-modal-btn-requester-mobile" class="flex items-center justify-center gap-2 p-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>แจ้งใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Requester Filters -->
+                    <div id="requester-filters-container" class="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700 hidden sm:block">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <input type="text" id="requester-search-problem" placeholder="ค้นหาตามชื่อปัญหา..." class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <input type="date" id="requester-search-date" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select id="requester-search-category" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">ทุกหมวดหมู่</option>
+                            </select>
+                            <button id="requester-filter-btn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>ค้นหา</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="requester-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <!-- Requester items will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Admin/Technician View -->
+                <div id="admin-view" class="hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <div class="flex items-center gap-3 self-start w-full sm:w-auto">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white" id="admin-view-title">แดชบอร์ด</h2>
+                             <button id="desktop-refresh-btn-admin" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="รีเฟรชรายการ">
+                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <!-- Desktop Buttons -->
+                        <div class="hidden sm:flex items-center gap-2">
+                             <button id="show-tech-dashboard-btn" class="hidden bg-purple-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-purple-500/30">
+                                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                                <span>แดชบอร์ดช่าง/ผู้จัดการ</span>
+                            </button>
+                            <button id="open-request-modal-btn-admin" class="bg-green-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 shadow-lg shadow-green-500/30">
+                                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                                <span>แจ้งปัญหาใหม่</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- REVISED: Mobile Action Buttons -->
+                    <div id="admin-mobile-actions" class="grid gap-3 mb-6 sm:hidden">
+                        <button id="toggle-admin-filters-btn" class="flex items-center justify-center gap-2 p-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                            <span>ค้นหา</span>
+                        </button>
+                        <button id="show-tech-dashboard-btn-mobile" class="hidden flex items-center justify-center gap-2 p-3 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
+                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                            <span>แดชบอร์ด</span>
+                        </button>
+                        <button id="open-request-modal-btn-admin-mobile" class="flex items-center justify-center gap-2 p-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>แจ้งใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Admin Filters - Add ID and hide by default on mobile -->
+                    <div id="admin-filters-container" class="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700 hidden sm:block">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                            <input type="text" id="admin-search-problem" placeholder="ค้นหาตามชื่อปัญหา..." class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 md:col-span-2">
+                            <input type="date" id="admin-search-date" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select id="admin-search-category" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">ทุกหมวดหมู่</option>
+                            </select>
+                            <button id="admin-filter-btn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 flex items-center justify-center gap-2 md:col-span-1">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>ค้นหา</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div data-status="รอดำเนินการ" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-yellow-400 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-400/10 transition-colors group">
+                            <div class="flex justify-between items-center">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">รอดำเนินการ</p>
+                                <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
+                            </div>
+                            <p id="summary-pending" class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                        </div>
+                        <div data-status="กำลังดำเนินการ" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-blue-500 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors group">
+                             <div class="flex justify-between items-center">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">กำลังดำเนินการ</p>
+                                <i data-lucide="loader-2" class="w-5 h-5 text-blue-500 animate-spin" style="animation-duration: 3s;"></i>
+                            </div>
+                            <p id="summary-inprogress" class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                        </div>
+                        <div data-status="ซ่อมเสร็จแล้ว" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-green-500 cursor-pointer hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors group">
+                             <div class="flex justify-between items-center">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">ซ่อมเสร็จแล้ว</p>
+                                <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500"></i>
+                            </div>
+                            <p id="summary-completed" class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                        </div>
+                        <div data-status="รออะไหล่/ยกเลิก" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-red-500 cursor-pointer hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors group">
+                             <div class="flex justify-between items-center">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">รออะไหล่/ยกเลิก</p>
+                                <i data-lucide="archive" class="w-5 h-5 text-red-500"></i>
+                            </div>
+                            <p id="summary-cancelled" class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                        </div>
+                    </div>
+                    
+                    <div id="admin-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                       <!-- Admin items will be injected here -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modal-container">
+        <!-- New Request Modal -->
+        <div id="new-request-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-xl rounded-2xl shadow-xl transform transition-all max-h-[90vh] flex flex-col">
+                <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                    <div class="flex justify-between items-start">
+                         <h3 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">ฟอร์มแจ้งปัญหาใหม่</h3>
+                         <button type="button" class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i data-lucide="x" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                         </button>
+                    </div>
+                </div>
+                <form id="new-request-form" class="flex flex-col flex-grow overflow-hidden">
+                    <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                        <div>
+                            <label for="problem" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ปัญหาที่พบ *</label>
+                            <input type="text" id="problem" name="problem" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">หมวดหมู่ *</label>
+                            <select id="category" name="category" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" required>
+                                <option value="">เลือกหมวดหมู่</option>
+                            </select>
+                        </div>
+                         <div>
+                            <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300">สถานที่ *</label>
+                            <input type="text" id="location" name="location" placeholder="เช่น แผนก หรือล็อกสินค้า" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label for="details" class="block text-sm font-medium text-gray-700 dark:text-gray-300">รายละเอียดเพิ่มเติม</label>
+                            <textarea id="details" name="details" rows="3" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"></textarea>
+                        </div>
+                        <div class="overflow-hidden">
+                             <label for="image" class="block text-sm font-medium text-gray-700 dark:text-gray-300">รูปภาพปัญหา</label>
+                             <input type="file" id="image" name="image" accept="image/*" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/50 dark:file:text-blue-300 dark:hover:file:bg-blue-900">
+                             <img id="image-preview" src="" class="mt-3 rounded-lg max-h-48 hidden w-full object-contain">
+                        </div>
+                        <div>
+                            <label for="assigned-to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">มอบหมายให้ (ช่าง/ผู้จัดการ/ผู้รับผิดชอบ)</label>
+                            <select id="assigned-to" name="assigned-to" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <option value="">เลือกช่าง/ผู้รับผิดชอบ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800/50 px-4 sm:px-6 py-4 flex justify-end mt-auto border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                         <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 dark:disabled:bg-blue-800">ส่งเรื่อง</button>
+                    </div>
+                 </form>
+            </div>
+        </div>
+
+        <!-- Details Modal -->
+        <div id="details-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-3xl rounded-2xl shadow-xl transform transition-all max-h-[90vh] flex flex-col">
+                <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-start">
+                         <div>
+                            <h3 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white" id="details-problem"></h3>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm" id="details-id"></p>
+                         </div>
+                         <button type="button" class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i data-lucide="x" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                         </button>
+                    </div>
+                </div>
+                <div class="p-4 sm:p-6 overflow-y-auto">
+                    <div id="admin-comment-display" class="hidden mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <h4 class="font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2"><i data-lucide="message-square" class="w-4 h-4"></i>หมายเหตุ:</h4>
+                        <p class="text-gray-700 dark:text-gray-400 mt-1 pl-6" id="admin-comment-text"></p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                        <div class="flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-gray-400"></i><strong>สถานะ: </strong> <span id="details-status" class="font-semibold px-2 py-1 rounded-full text-xs"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="layout-grid" class="w-4 h-4 text-gray-400"></i><strong>หมวดหมู่: </strong> <span id="details-category" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="calendar" class="w-4 h-4 text-gray-400"></i><strong>วันที่แจ้ง:</strong> <span id="details-date" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i><strong>สถานที่:</strong> <span id="details-location" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="user" class="w-4 h-4 text-gray-400"></i><strong>ผู้แจ้ง: </strong> <span id="details-requester" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4 text-gray-400"></i><strong>มอบหมายให้:</strong> <span id="details-assigned-to" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3"><i data-lucide="clock" class="w-4 h-4 text-gray-400"></i><strong>อัปเดตล่าสุด: </strong> <span id="details-last-updated" class="font-normal"></span></div>
+                        <div class="flex items-center gap-3 col-span-full"><i data-lucide="user-edit" class="w-4 h-4 text-gray-400"></i><strong>อัปเดตโดย:</strong> <span id="details-updated-by" class="font-normal"></span></div>
+                        <div class="col-span-full">
+                            <strong class="flex items-center gap-3"><i data-lucide="file-text" class="w-4 h-4 text-gray-400"></i>รายละเอียด:</strong>
+                            <p class="mt-2 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 p-3 rounded-lg" id="details-details"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-bold mb-2 text-gray-800 dark:text-white">รูปภาพก่อนแก้ไข</h4>
+                            <img id="details-before-image" src="https://placehold.co/600x400/e2e8f0/a0aec0?text=ไม่มีรูปภาพ" class="w-full h-auto rounded-lg shadow-sm zoomable-image cursor-zoom-in" alt="รูปภาพก่อนแก้ไข">
+                        </div>
+                        <div id="after-image-container" class="hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-bold text-gray-800 dark:text-white">รูปภาพหลังแก้ไข</h4>
+                                <button id="change-after-image-btn" class="hidden text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">เปลี่ยนรูป</button>
+                            </div>
+                            <img id="details-after-image" src="https://placehold.co/600x400/e2e8f0/a0aec0?text=รออัปโหลด" class="w-full h-auto rounded-lg shadow-sm zoomable-image cursor-zoom-in" alt="รูปภาพหลังแก้ไข">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Admin/Technician Controls -->
+                <div id="admin-controls" class="bg-gray-50 dark:bg-gray-900/50 p-4 md:p-6 mt-auto border-t border-gray-200 dark:border-gray-700 hidden">
+                     <h4 class="font-bold mb-4 text-lg text-gray-800 dark:text-white">จัดการสถานะ</h4>
+                     <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
+                                <label for="update-status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">เปลี่ยนสถานะเป็น</label>
+                                <select id="update-status" name="update-status" class="mt-1 w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                     <option value="รอดำเนินการ">รอดำเนินการ</option>
+                                     <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                                     <option value="ซ่อมเสร็จแล้ว">ซ่อมเสร็จแล้ว</option>
+                                     <option value="รออะไหล่/ยกเลิก">รออะไหล่/ยกเลิก</option>
+                                </select>
+                             </div>
+                             <div class="self-end">
+                                 <button id="update-status-btn" class="w-full bg-gray-700 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:bg-gray-400">อัปเดตสถานะ</button>
+                             </div>
+                        </div>
+                        <div id="status-comment-section" class="hidden">
+                            <label for="status-comment-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">หมายเหตุ</label>
+                            <textarea id="status-comment-input" rows="" class="mt-1 w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"></textarea>
+                        </div>
+                     </div>
+
+                     <div id="upload-after-image-section" class="mt-4 hidden">
+                        <input type="file" id="after-image-upload" name="after-image-upload" accept="image/*" class="hidden">
+                        <div id="initial-upload-container" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">อัปโหลดรูปหลังแก้ไข</label>
+                            <button type="button" id="trigger-initial-upload-btn" class="mt-1 w-full flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-400 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition">
+                                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                                <span class="ml-2">เลือกไฟล์รูปภาพ...</span>
+                            </button>
+                        </div>
+                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Image Zoom Modal -->
+        <div id="image-zoom-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm cursor-zoom-out">
+            <img id="zoomed-image" src="" alt="Zoomed image" class="max-w-full max-h-full rounded-lg cursor-default">
+        </div>
+
+        <!-- Confirm Delete Modal -->
+        <div id="confirm-delete-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-xl p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50">
+                    <i data-lucide="alert-triangle" class="h-6 w-6 text-red-600 dark:text-red-400"></i>
+                </div>
+                <h3 class="text-xl font-bold mt-4 text-gray-800 dark:text-white">ยืนยันการลบ</h3>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">คุณแน่ใจหรือไม่ว่าต้องการลบรายการแจ้งปัญหานี้? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+                <div class="mt-6 flex justify-center gap-4">
+                    <button id="confirm-delete-no-btn" class="py-2 px-6 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">ยกเลิก</button>
+                    <button id="confirm-delete-yes-btn" class="py-2 px-6 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">ใช่, ลบเลย</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Registration Modal -->
+        <div id="register-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-xl">
+                <form id="register-form">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start">
+                             <h3 class="text-2xl font-bold text-gray-800 dark:text-white">ลงทะเบียนผู้ใช้ใหม่</h3>
+                             <button type="button" class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                                <i data-lucide="x" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                             </button>
+                        </div>
+                        <p class="mb-4 text-gray-600 dark:text-gray-400 mt-1">กรอกข้อมูลเพื่อลงทะเบียนใช้งานระบบ</p>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="register-full-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อ-สกุล *</label>
+                                <input type="text" id="register-full-name" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" required>
+                            </div>
+                            <div>
+                                <label for="register-employee-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ตั้งรหัสพนักงาน (10 หลัก) *</label>
+                                <input type="text" id="register-employee-id" class="mt-1 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" required maxlength="10" pattern="\d{10}">
+                            </div>
+                            <!-- NEW: Technician Registration Checkbox -->
+                            <div class="flex items-center pt-2">
+                                <input id="register-as-technician" name="register-as-technician" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500">
+                                <label for="register-as-technician" class="ml-3 text-sm text-gray-700 dark:text-gray-300">ลงทะเบียนในฐานะช่าง/ผู้จัดการ</label>
+                            </div>
+                        </div>
+                         <p id="register-error" class="text-red-500 text-sm mt-2 text-center h-5"></p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 flex justify-end border-t border-gray-200 dark:border-gray-700">
+                         <button id="register-submit-btn" type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 disabled:bg-blue-300">ลงทะเบียน</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- NEW: Technician Dashboard Modal -->
+        <div id="tech-dashboard-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-800 w-full h-full sm:w-full sm:max-w-6xl sm:rounded-2xl sm:shadow-xl sm:max-h-[90vh] flex flex-col">
+                <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                    <h3 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">แดชบอร์ด</h3>
+                    <button type="button" class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <i data-lucide="x" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                    </button>
+                </div>
+                <div class="flex-grow flex flex-col md:flex-row overflow-hidden">
+                    <!-- Left Panel: Technician List -->
+                    <div id="tech-dashboard-list-panel" class="w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto flex-shrink-0">
+                        <h4 class="font-bold mb-4 text-gray-800 dark:text-white">รายชื่อช่าง/ผู้จัดการ</h4>
+                        <ul id="tech-dashboard-list" class="space-y-1">
+                            <!-- Technician list items will be injected here -->
+                        </ul>
+                    </div>
+                    <!-- Right Panel: Technician Details -->
+                    <div id="tech-dashboard-details-view" class="w-full md:w-2/3 lg:w-3/4 p-4 sm:p-6 overflow-y-auto">
+                        <div id="tech-dashboard-placeholder" class="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
+                            <i data-lucide="users" class="w-16 h-16 mb-4"></i>
+                            <h4 class="text-xl font-semibold">กรุณาเลือกช่าง/ผู้จัดการ</h4>
+                            <p class="text-sm">เพื่อดูสรุปและรายการงาน</p>
+                        </div>
+                        <div id="tech-dashboard-content" class="hidden">
+                             <!-- Back button for mobile -->
+                            <button id="tech-dashboard-back-btn" class="md:hidden mb-4 flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                กลับไปที่รายชื่อ
+                            </button>
+                            <h4 id="tech-dashboard-name" class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6"></h4>
+                            <!-- Summary Cards -->
+                            <div id="tech-dashboard-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <!-- Summary cards for the selected technician will be injected here -->
+                            </div>
+                            <!-- Request List -->
+                            <h5 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-4 mt-8">รายการงานที่ได้รับมอบหมาย</h5>
+                            <div id="tech-dashboard-requests" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                                <!-- Request cards for the selected technician will be injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Custom Message Modal -->
+        <div id="message-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-xl p-6 text-center">
+                <div id="message-icon" class="mx-auto h-12 w-12">
+                </div>
+                <h3 id="message-title" class="text-xl font-bold mt-4 text-gray-800 dark:text-white"></h3>
+                <p id="message-text" class="text-gray-500 dark:text-gray-400 mt-2"></p>
+                <div class="mt-6 flex justify-center">
+                    <button id="message-ok-btn" class="py-2 px-8 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">ตกลง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // =================================================================================
+        // CONFIGURATION
+        // =================================================================================
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxDFrcak-44cf8NmVUC-msT3D3gHLNc7FYowvJ_25qBVMVnWqr75xRIHvTSEQPZFewx/exec";
+        const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dwa3hxmf6/image/upload";
+        const CLOUDINARY_UPLOAD_PRESET = "SafetyRE";
+        const BACKEND_SERVER_URL = "https://re-ef4y.onrender.com";
+        const VAPID_PUBLIC_KEY = "BLqqcvvk8fxGW7u8kqbAQoQGRj4ZQlTvKNkdAtMApFP4FwUNiXjg8YeB_B3KxXfbEJwWIZQO7nSZaKUMQRQWJGM";
+
+
+        // =================================================================================
+        // PWA & NOTIFICATION LOGIC
+        // =================================================================================
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(reg => console.log('SW registered.', reg))
+              .catch(err => console.log('SW registration failed: ', err));
+          });
+        }
+        
+        let deferredPrompt;
+        const installButton = document.getElementById('install-pwa-btn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          installButton.classList.remove('hidden');
+        });
+        installButton.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installButton.classList.add('hidden');
+            }
+        });
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function subscribeUserToPush() {
+            if (!currentUser) {
+                showMessageModal('ข้อผิดพลาด', 'ไม่พบข้อมูลผู้ใช้', 'error');
+                return;
+            }
+             if (!('serviceWorker' in navigator) || !navigator.serviceWorker.ready) {
+                showMessageModal('ข้อผิดพลาด', 'Service Worker ไม่พร้อมใช้งาน', 'error');
+                return;
+            }
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    showMessageModal('ไม่อนุญาต', 'คุณต้องอนุญาตการแจ้งเตือนเพื่อรับอัปเดต', 'error');
+                    return;
+                }
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+                
+                const payload = {
+                    userId: currentUser.id,
+                    subscription: subscription
+                };
+
+                await fetch(`${BACKEND_SERVER_URL}/save-subscription`, {
+                    method: 'POST', 
+                    body: JSON.stringify(payload), 
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                showMessageModal('สำเร็จ', 'ลงทะเบียนรับการแจ้งเตือนสำเร็จ!', 'success');
+            } catch (error) {
+                console.error('Failed to subscribe the user: ', error);
+                showMessageModal('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการลงทะเบียนรับการแจ้งเตือน', 'error');
+            }
+        }
+        
+        // =================================================================================
+        // THEME (DARK/LIGHT MODE) LOGIC
+        // =================================================================================
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        function handleThemeToggle() {
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+            applyTheme(currentTheme);
+        }
+
+        document.getElementById('theme-toggle-login').addEventListener('click', handleThemeToggle);
+        document.getElementById('theme-toggle-main').addEventListener('click', handleThemeToggle);
+
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+
+
+        // =================================================================================
+        // APP LOGIC
+        // =================================================================================
+        let currentUser = null;
+        let allRequests = [];
+        let technicians = [];
+        let categories = [];
+        let currentRequestId = null;
+        let requestIdToDelete = null;
+
+        // --- DOM Element Selectors ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loginPage = document.getElementById('login-page');
+        const mainAppPage = document.getElementById('main-app-page');
+        const requesterView = document.getElementById('requester-view');
+        const adminView = document.getElementById('admin-view');
+        const adminViewTitle = document.getElementById('admin-view-title'); 
+        const loginForm = document.getElementById('login-form');
+        const employeeIdInput = document.getElementById('employee-id');
+        const loginError = document.getElementById('login-error');
+        const userNameDisplay = document.getElementById('user-name-display');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const logoutButton = document.getElementById('logout-button');
+        const notificationButton = document.getElementById('notification-btn');
+        const requesterList = document.getElementById('requester-list');
+        const adminList = document.getElementById('admin-list');
+        const newRequestModal = document.getElementById('new-request-modal');
+        const openRequestModalBtn = document.getElementById('open-request-modal-btn');
+        const openRequestModalBtnAdmin = document.getElementById('open-request-modal-btn-admin');
+        const newRequestForm = document.getElementById('new-request-form');
+        const imageInput = document.getElementById('image');
+        const imagePreview = document.getElementById('image-preview');
+        const detailsModal = document.getElementById('details-modal');
+        const adminControls = document.getElementById('admin-controls');
+        const afterImageContainer = document.getElementById('after-image-container');
+        const changeAfterImageBtn = document.getElementById('change-after-image-btn');
+        const uploadAfterImageSection = document.getElementById('upload-after-image-section');
+        const updateStatusSelect = document.getElementById('update-status');
+        const afterImageUploadInput = document.getElementById('after-image-upload');
+        const adminCommentDisplay = document.getElementById('admin-comment-display'); 
+        const statusCommentSection = document.getElementById('status-comment-section'); 
+        const statusCommentInput = document.getElementById('status-comment-input'); 
+        const triggerInitialUploadBtn = document.getElementById('trigger-initial-upload-btn');
+        const initialUploadContainer = document.getElementById('initial-upload-container');
+        const updateStatusBtn = document.getElementById('update-status-btn');
+        const imageZoomModal = document.getElementById('image-zoom-modal');
+        const zoomedImage = document.getElementById('zoomed-image');
+        const adminFilterBtn = document.getElementById('admin-filter-btn');
+        const requesterFilterBtn = document.getElementById('requester-filter-btn');
+        const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+        const confirmDeleteYesBtn = document.getElementById('confirm-delete-yes-btn');
+        const confirmDeleteNoBtn = document.getElementById('confirm-delete-no-btn');
+        const registerModal = document.getElementById('register-modal');
+        const showRegisterModalBtn = document.getElementById('show-register-modal-btn');
+        const registerForm = document.getElementById('register-form');
+        const registerError = document.getElementById('register-error');
+        const messageModal = document.getElementById('message-modal');
+        const messageTitle = document.getElementById('message-title');
+        const messageText = document.getElementById('message-text');
+        const messageIcon = document.getElementById('message-icon'); 
+        const messageOkBtn = document.getElementById('message-ok-btn');
+        const assignedToSelect = document.getElementById('assigned-to');
+        const categorySelect = document.getElementById('category');
+        const requesterSearchCategorySelect = document.getElementById('requester-search-category');
+        const adminSearchCategorySelect = document.getElementById('admin-search-category');
+        // Technician Dashboard Elements
+        const showTechDashboardBtn = document.getElementById('show-tech-dashboard-btn');
+        const techDashboardModal = document.getElementById('tech-dashboard-modal');
+        const techDashboardListPanel = document.getElementById('tech-dashboard-list-panel');
+        const techDashboardList = document.getElementById('tech-dashboard-list');
+        const techDashboardDetailsView = document.getElementById('tech-dashboard-details-view');
+        const techDashboardPlaceholder = document.getElementById('tech-dashboard-placeholder');
+        const techDashboardContent = document.getElementById('tech-dashboard-content');
+        const techDashboardName = document.getElementById('tech-dashboard-name');
+        const techDashboardSummary = document.getElementById('tech-dashboard-summary');
+        const techDashboardRequests = document.getElementById('tech-dashboard-requests');
+        const techDashboardBackBtn = document.getElementById('tech-dashboard-back-btn');
+        // Mobile Admin Controls
+        const toggleAdminFiltersBtn = document.getElementById('toggle-admin-filters-btn');
+        const adminFiltersContainer = document.getElementById('admin-filters-container');
+        const openRequestModalBtnAdminMobile = document.getElementById('open-request-modal-btn-admin-mobile');
+        const showTechDashboardBtnMobile = document.getElementById('show-tech-dashboard-btn-mobile');
+        // Mobile Requester Controls
+        const toggleRequesterFiltersBtn = document.getElementById('toggle-requester-filters-btn');
+        const requesterFiltersContainer = document.getElementById('requester-filters-container');
+        const openRequestModalBtnRequesterMobile = document.getElementById('open-request-modal-btn-requester-mobile');
+        // NEW: Refresh buttons
+        const desktopRefreshBtnRequester = document.getElementById('desktop-refresh-btn-requester');
+        const desktopRefreshBtnAdmin = document.getElementById('desktop-refresh-btn-admin');
+
+
+        const showLoading = (show) => loadingOverlay.classList.toggle('hidden', !show);
+        const showElement = (element, show) => element.classList.toggle('hidden', !show);
+
+        function setModalState(modal, show) {
+            if (!modal) return;
+            modal.classList.toggle('hidden', !show);
+            if (show) {
+                document.body.classList.add('modal-open');
+            } else {
+                // Check if any other modals are open before removing the class
+                const anyModalOpen = document.querySelector('#modal-container > div:not(.hidden)');
+                if (!anyModalOpen) {
+                    document.body.classList.remove('modal-open');
+                }
+            }
+        }
+
+        function showNewRequestModal(show) {
+            setModalState(newRequestModal, show);
+            if (show) {
+                newRequestForm.reset(); 
+                imagePreview.classList.add('hidden'); 
+                populateTechnicianDropdown(technicians); 
+                populateCategoryDropdowns(categories); 
+            }
+            lucide.createIcons();
+        }
+
+        const statusStyles = {
+            "รอดำเนินการ": { text: "text-yellow-800 dark:text-yellow-300", bg: "bg-yellow-100 dark:bg-yellow-400/20", border: "border-yellow-400 dark:border-yellow-500", icon: "clock" },
+            "กำลังดำเนินการ": { text: "text-blue-800 dark:text-blue-300", bg: "bg-blue-100 dark:bg-blue-500/20", border: "border-blue-500 dark:border-blue-400", icon: "loader-2" },
+            "ซ่อมเสร็จแล้ว": { text: "text-green-800 dark:text-green-300", bg: "bg-green-100 dark:bg-green-500/20", border: "border-green-500 dark:border-green-400", icon: "check-circle-2" },
+            "รออะไหล่/ยกเลิก": { text: "text-red-800 dark:text-red-300", bg: "bg-red-100 dark:bg-red-500/20", border: "border-red-500 dark:border-red-400", icon: "archive" },
+        };
+
+        function showMessageModal(title, message, type = 'info') {
+            messageTitle.textContent = title;
+            messageText.textContent = message;
+            let iconSvg = '';
+            switch (type) {
+                case 'success': iconSvg = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/50"><i data-lucide="check" class="h-6 w-6 text-green-600 dark:text-green-400"></i></div>`; break;
+                case 'error': iconSvg = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50"><i data-lucide="alert-triangle" class="h-6 w-6 text-red-600 dark:text-red-400"></i></div>`; break;
+                default: iconSvg = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50"><i data-lucide="info" class="h-6 w-6 text-blue-600 dark:text-blue-400"></i></div>`;
+            }
+            messageIcon.innerHTML = iconSvg;
+            lucide.createIcons();
+            setModalState(messageModal, true);
+        }
+
+        messageOkBtn.addEventListener('click', () => setModalState(messageModal, false));
+
+        async function callGasApi(payload) {
+            try {
+                const response = await fetch(GAS_API_URL, {
+                    method: 'POST', mode: 'cors', cache: 'no-cache', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'error') throw new Error(result.message || 'เกิดข้อผิดพลาดจาก API');
+                if (!response.ok) throw new Error(`Network response was not ok, status: ${response.status}`);
+                return result.data;
+            } catch (error) {
+                console.error("API Call Error:", error);
+                throw error;
+            }
+        }
+
+        async function uploadToCloudinary(file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                const response = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.secure_url) return data.secure_url;
+                else throw new Error('Cloudinary upload failed');
+            } catch (error) {
+                console.error("Cloudinary Upload Error:", error);
+                showMessageModal('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ', 'error');
+                return null;
+            }
+        }
+
+        function filterByStatus(status) {
+            document.getElementById('admin-search-problem').value = '';
+            document.getElementById('admin-search-date').value = '';
+            document.getElementById('admin-search-category').value = '';
+            let filtered;
+            if (currentUser.isTechnician && !currentUser.isAdmin) {
+                filtered = allRequests.filter(req => req.status === status && String(req.assignedToId) === String(currentUser.id));
+            } else {
+                filtered = allRequests.filter(req => req.status === status);
+            }
+            renderRequests(filtered, adminList, currentUser);
+        }
+
+        adminView.addEventListener('click', (e) => {
+            const summaryCard = e.target.closest('.summary-card');
+            if (summaryCard) {
+                const statusToFilter = summaryCard.dataset.status;
+                filterByStatus(statusToFilter);
+            }
+        });
+
+        function updateSummaryCards(requests, containerIdPrefix = 'summary') {
+            const counts = { pending: 0, inprogress: 0, completed: 0, cancelled: 0 };
+            requests.forEach(req => {
+                if (req.status === 'รอดำเนินการ') counts.pending++;
+                else if (req.status === 'กำลังดำเนินการ') counts.inprogress++;
+                else if (req.status === 'ซ่อมเสร็จแล้ว') counts.completed++;
+                else if (req.status === 'รออะไหล่/ยกเลิก') counts.cancelled++;
+            });
+            document.getElementById(`${containerIdPrefix}-pending`).textContent = counts.pending;
+            document.getElementById(`${containerIdPrefix}-inprogress`).textContent = counts.inprogress;
+            document.getElementById(`${containerIdPrefix}-completed`).textContent = counts.completed;
+            document.getElementById(`${containerIdPrefix}-cancelled`).textContent = counts.cancelled;
+        }
+
+        function createRequestCard(request, userSession) {
+            const style = statusStyles[request.status] || statusStyles['รอดำเนินการ'];
+            const canDelete = userSession.isAdmin || (String(request.requesterId) === String(userSession.id));
+            const assignedToText = request.assignedToName || 'ยังไม่ระบุ';
+
+            return `
+                 <div class="request-card bg-white dark:bg-gray-800/50 p-4 rounded-xl shadow-lg shadow-gray-200/40 dark:shadow-black/20 hover:shadow-xl dark:hover:shadow-black/40 transition-all duration-300 cursor-pointer border-l-4 ${style.border} transform hover:-translate-y-1" data-id="${request.id}">
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-bold text-lg text-gray-800 dark:text-white truncate pr-4">${request.problem}</h3>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${style.bg} ${style.text} flex-shrink-0">${request.status}</span>
+                    </div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
+                        <p class="flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4 text-gray-400"></i><span class="font-medium">หมวดหมู่:</span> ${request.category}</p>
+                        <p class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i><span class="font-medium">สถานที่:</span> ${request.location}</p>
+                        <p class="flex items-center gap-2"><i data-lucide="user" class="w-4 h-4 text-gray-400"></i><span class="font-medium">ผู้แจ้ง:</span> ${request.requesterName}</p>
+                        <p class="flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4 text-gray-400"></i><span class="font-medium">ผู้รับผิดชอบ:</span> ${assignedToText}</p>
+                    </div>
+                    <div class="border-t border-gray-200 dark:border-gray-700 mt-4 pt-3 text-xs text-gray-500 dark:text-gray-500 flex justify-between items-center">
+                        <span>แจ้ง: ${new Date(request.date).toLocaleDateString('th-TH')}</span>
+                        ${canDelete ? `
+                        <button class="delete-btn p-1.5 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 dark:hover:text-red-400 transition-colors z-10" data-id="${request.id}" title="ลบรายการ">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function renderRequests(requests, container, userSession) {
+            container.innerHTML = '';
+            if (requests && requests.length > 0) {
+                requests.forEach(req => container.innerHTML += createRequestCard(req, userSession));
+            } else {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-12">ไม่พบรายการแจ้งปัญหา</p>';
+            }
+            lucide.createIcons();
+        }
+        
+        function populateDetailsModal(request) {
+            currentRequestId = request.id;
+            const style = statusStyles[request.status] || statusStyles['รอดำเนินการ'];
+
+            document.getElementById('details-problem').textContent = request.problem;
+            document.getElementById('details-id').textContent = `ID: ${request.id}`;
+            const statusSpan = document.getElementById('details-status');
+            statusSpan.textContent = request.status;
+            statusSpan.className = `font-semibold px-2 py-1 rounded-full text-xs ${style.bg} ${style.text}`;
+            
+            document.getElementById('details-date').textContent = new Date(request.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric'});
+            document.getElementById('details-last-updated').textContent = new Date(request.lastUpdated).toLocaleString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour:'2-digit', minute:'2-digit' });
+            document.getElementById('details-updated-by').textContent = request.updatedBy || '-';
+            document.getElementById('details-category').textContent = request.category;
+            document.getElementById('details-location').textContent = request.location;
+            document.getElementById('details-requester').textContent = `${request.requesterName} (${request.requesterId})`;
+            document.getElementById('details-details').textContent = request.details || '-';
+            document.getElementById('details-assigned-to').textContent = request.assignedToName || 'ยังไม่ระบุ';
+
+            adminCommentDisplay.classList.toggle('hidden', !(request.adminComment && request.status !== 'รอดำเนินการ'));
+            if (request.adminComment && request.status !== 'รอดำเนินการ') {
+                 document.getElementById('admin-comment-text').textContent = request.adminComment;
+            }
+
+            const beforeImage = document.getElementById('details-before-image');
+            beforeImage.src = request.beforeImageUrl || 'https://placehold.co/600x400/f1f5f9/94a3b8?text=ไม่มีรูปภาพ';
+            beforeImage.onerror = () => { beforeImage.src = 'https://placehold.co/600x400/fecaca/f87171?text=Error'; };
+
+            const afterImage = document.getElementById('details-after-image');
+            afterImageContainer.classList.toggle('hidden', !request.afterImageUrl);
+            if (request.afterImageUrl) {
+                 afterImage.src = request.afterImageUrl;
+                 afterImage.onerror = () => { afterImage.src = 'https://placehold.co/600x400/fecaca/f87171?text=Error'; };
+            }
+            
+            const canManage = currentUser.isAdmin || (currentUser.isTechnician && String(request.assignedToId) === String(currentUser.id));
+            adminControls.classList.toggle('hidden', !canManage);
+
+            if (canManage) {
+                updateStatusSelect.value = request.status;
+                statusCommentSection.classList.toggle('hidden', request.status === 'รอดำเนินการ');
+                statusCommentInput.value = request.adminComment || '';
+                const isCompleted = request.status === 'ซ่อมเสร็จแล้ว';
+                uploadAfterImageSection.classList.toggle('hidden', !isCompleted);
+                if (isCompleted) {
+                    changeAfterImageBtn.classList.toggle('hidden', !request.afterImageUrl);
+                    initialUploadContainer.classList.toggle('hidden', !!request.afterImageUrl);
+                }
+            }
+            setModalState(detailsModal, true);
+            lucide.createIcons();
+        }
+
+        async function loadDashboardData(showIndicator = true) {
+            if (showIndicator) showLoading(true);
+            try {
+                let data;
+                if (currentUser.isAdmin) {
+                    data = await callGasApi({ action: 'getRequests', isAdmin: true });
+                    adminViewTitle.textContent = 'แดชบอร์ด';
+                } else if (currentUser.isTechnician) {
+                    data = await callGasApi({ action: 'getRequests', isTechnician: true, employeeId: currentUser.id });
+                    adminViewTitle.textContent = 'แดชบอร์ด';
+                } else {
+                    data = await callGasApi({ action: 'getRequests', requesterId: currentUser.id });
+                }
+
+                if (data) {
+                    allRequests = data.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+                    
+                    if (currentUser.isAdmin || currentUser.isTechnician) {
+                        updateSummaryCards(allRequests);
+                        renderRequests(allRequests, adminList, currentUser);
+                    } else { 
+                        const userRequests = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
+                        renderRequests(userRequests, requesterList, currentUser);
+                    }
+                }
+            } catch(error) {
+                showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${error.message}`, 'error');
+            } finally {
+                 if (showIndicator) showLoading(false);
+            }
+        }
+
+        async function loadTechnicians() {
+            try {
+                const data = await callGasApi({ action: 'getTechnicians' });
+                if (data) {
+                    technicians = data;
+                    populateTechnicianDropdown(technicians);
+                }
+            } catch (error) {
+                console.error("Error loading technicians:", error);
+                showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการโหลดรายชื่อช่าง/หัวหน้างาน: ${error.message}`, 'error');
+            }
+        }
+
+        function populateTechnicianDropdown(techs) {
+            assignedToSelect.innerHTML = '<option value="">เลือกช่าง/ผู้จัดการ/ผู้รับผิดชอบ</option>';
+            techs.forEach(tech => {
+                const option = document.createElement('option');
+                option.value = tech.id;
+                option.textContent = tech.name;
+                assignedToSelect.appendChild(option);
+            });
+        }
+
+        async function loadCategories() {
+            try {
+                const data = await callGasApi({ action: 'getCategories' });
+                if (data) {
+                    categories = data;
+                    populateCategoryDropdowns(categories);
+                }
+            } catch (error) {
+                console.error("Error loading categories:", error);
+                showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการโหลดหมวดหมู่: ${error.message}`, 'error');
+            }
+        }
+
+        function populateCategoryDropdowns(cats) {
+            const defaultOption = '<option value="">ทุกหมวดหมู่</option>';
+            
+            categorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
+            requesterSearchCategorySelect.innerHTML = '';
+            adminSearchCategorySelect.innerHTML = '';
+
+            cats.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categorySelect.appendChild(option.cloneNode(true));
+                requesterSearchCategorySelect.appendChild(option.cloneNode(true));
+                adminSearchCategorySelect.appendChild(option.cloneNode(true));
+            });
+            requesterSearchCategorySelect.insertAdjacentHTML('afterbegin', defaultOption);
+            adminSearchCategorySelect.insertAdjacentHTML('afterbegin', defaultOption);
+        }
+        
+        async function initializeUserSession(user) {
+            currentUser = user;
+            userNameDisplay.textContent = currentUser.name;
+            userIdDisplay.textContent = `ID: ${currentUser.id}`;
+            showElement(loginPage, false);
+            showElement(mainAppPage, true);
+            
+            notificationButton.classList.remove('hidden');
+
+            const isManager = currentUser.isAdmin || currentUser.isTechnician;
+            showElement(adminView, isManager); 
+            showElement(requesterView, !isManager); 
+            showElement(showTechDashboardBtn, currentUser.isAdmin); // Desktop button
+
+            // Handle mobile admin buttons
+            if (isManager) {
+                const adminMobileActions = document.getElementById('admin-mobile-actions');
+                if (currentUser.isAdmin) {
+                    showElement(showTechDashboardBtnMobile, true);
+                    adminMobileActions.classList.add('grid-cols-3');
+                    adminMobileActions.classList.remove('grid-cols-2');
+                } else { // Is a technician but not an admin
+                    showElement(showTechDashboardBtnMobile, false);
+                    adminMobileActions.classList.add('grid-cols-2');
+                    adminMobileActions.classList.remove('grid-cols-3');
+                }
+            }
+
+            await loadDashboardData();
+            await loadTechnicians(); 
+            await loadCategories(); 
+            lucide.createIcons();
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = employeeIdInput.value;
+            loginError.textContent = '';
+            if (!id || id.length !== 10) {
+                loginError.textContent = 'กรุณากรอกรหัสพนักงาน 10 หลักให้ถูกต้อง';
+                return;
+            }
+            showLoading(true);
+            try {
+                const userData = await callGasApi({ action: 'login', employeeId: id });
+                if (userData) {
+                    const user = { id: userData.id, name: userData.name, isAdmin: userData.isAdmin, isTechnician: userData.isTechnician }; 
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    await initializeUserSession(user);
+                } else {
+                    loginError.textContent = 'ไม่พบรหัสพนักงานนี้ในระบบ';
+                }
+            } catch (error) {
+                loginError.textContent = error.message;
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // REVISED: Unsubscribe from push notifications in the background on logout
+        logoutButton.addEventListener('click', () => {
+            // Define the unsubscription logic as a separate async function.
+            const unsubscribeInBackground = async () => {
+                try {
+                    // Check for service worker and push manager support.
+                    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+                    
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.getSubscription();
+                    
+                    if (subscription) {
+                        // Tell the backend to remove the subscription record.
+                        // This is "fire and forget" - we don't wait for the response.
+                        fetch(`${BACKEND_SERVER_URL}/remove-subscription`, {
+                            method: 'POST',
+                            body: JSON.stringify({ endpoint: subscription.endpoint }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        
+                        // Unsubscribe from the browser's push service.
+                        const unsubscribed = await subscription.unsubscribe();
+                        if (unsubscribed) {
+                            console.log('User unsubscribed from push notifications in the background.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error during background push notification unsubscription:', error);
+                    // This error is silent to the user as they have already been logged out.
+                }
+            };
+            
+            // Start the background unsubscription process.
+            unsubscribeInBackground();
+
+            // Immediately clear the user's session data from local storage.
+            localStorage.removeItem('currentUser');
+            
+            // Immediately reload the page to take the user to the login screen.
+            window.location.reload();
+        });
+
+        notificationButton.addEventListener('click', subscribeUserToPush);
+
+        openRequestModalBtn.addEventListener('click', () => showNewRequestModal(true));
+        openRequestModalBtnAdmin.addEventListener('click', () => showNewRequestModal(true));
+
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.fixed');
+                if (modal) setModalState(modal, false);
+            });
+        });
+        
+        newRequestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.submitter;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'กำลังส่ง...';
+            showLoading(true);
+
+            try {
+                const formData = new FormData(newRequestForm);
+                let imageUrl = '';
+                const imageFile = formData.get('image');
+
+                if (imageFile && imageFile.size > 0) {
+                    const uploadedUrl = await uploadToCloudinary(imageFile);
+                    if (!uploadedUrl) throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
+                    imageUrl = uploadedUrl;
+                }
+
+                const selectedTechnicianId = assignedToSelect.value;
+                const selectedTechnicianName = assignedToSelect.options[assignedToSelect.selectedIndex].textContent;
+
+                const requestData = {
+                    problem: formData.get('problem'), category: formData.get('category'), location: formData.get('location'),
+                    details: formData.get('details'), beforeImageUrl: imageUrl, requesterId: currentUser.id, requesterName: currentUser.name,
+                    assignedToId: selectedTechnicianId, 
+                    assignedToName: selectedTechnicianId ? selectedTechnicianName : '' 
+                };
+
+                const result = await callGasApi({ action: 'createRequest', data: requestData });
+                if (result) {
+                    showMessageModal('สำเร็จ', 'แจ้งปัญหาสำเร็จ', 'success');
+                    setTimeout(async () => {
+                        showNewRequestModal(false);
+                        await loadDashboardData(false);
+                    }, 300);
+                } else {
+                    throw new Error('ไม่สามารถสร้างใบแจ้งปัญหาได้ กรุณาลองใหม่อีกครั้ง');
+                }
+            } catch (error) {
+                showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'ส่งเรื่อง';
+            }
+        });
+        
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => { imagePreview.src = event.target.result; imagePreview.classList.remove('hidden'); }
+                reader.readAsDataURL(file);
+            } else { imagePreview.classList.add('hidden'); }
+        });
+
+        document.getElementById('app').addEventListener('click', (e) => {
+             const card = e.target.closest('.request-card');
+             if (card && !e.target.closest('.delete-btn')) {
+                const requestId = card.dataset.id;
+                const requestData = allRequests.find(r => r.id === requestId);
+                if (requestData) populateDetailsModal(requestData);
+             }
+             if (e.target.classList.contains('zoomable-image') && e.target.src && !e.target.src.includes('placehold.co')) {
+                setModalState(imageZoomModal, true);
+                zoomedImage.src = e.target.src;
+             }
+             if (e.target.closest('.delete-btn')) {
+                requestIdToDelete = e.target.closest('.delete-btn').dataset.id;
+                setModalState(confirmDeleteModal, true);
+            }
+        });
+        
+        imageZoomModal.addEventListener('click', () => { 
+            setModalState(imageZoomModal, false); 
+            zoomedImage.src = ''; 
+        });
+
+        updateStatusBtn.addEventListener('click', async () => {
+            updateStatusBtn.disabled = true;
+            const newStatus = updateStatusSelect.value;
+            const comment = statusCommentInput.value.trim(); 
+            const payload = { action: 'updateStatus', id: currentRequestId, status: newStatus, updaterName: currentUser.name, comment: comment };
+            
+            showLoading(true);
+            try {
+                const result = await callGasApi(payload);
+                if(result) { 
+                    showMessageModal('สำเร็จ', 'อัปเดตสถานะสำเร็จ', 'success'); 
+                    setModalState(detailsModal, false); 
+                    await loadDashboardData(); 
+                    if(!techDashboardModal.classList.contains('hidden')) {
+                        const activeTech = techDashboardList.querySelector('.bg-blue-100');
+                        if(activeTech) {
+                            activeTech.click();
+                        }
+                    }
+                }
+            } catch (error) { showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการอัปเดตสถานะ: ${error.message}`, 'error'); } 
+            finally { showLoading(false); updateStatusBtn.disabled = false; }
+        });
+        
+        updateStatusSelect.addEventListener('change', (e) => {
+            statusCommentSection.classList.toggle('hidden', e.target.value === 'รอดำเนินการ');
+            uploadAfterImageSection.classList.toggle('hidden', e.target.value !== 'ซ่อมเสร็จแล้ว');
+        });
+
+        changeAfterImageBtn.addEventListener('click', () => afterImageUploadInput.click());
+        triggerInitialUploadBtn.addEventListener('click', () => afterImageUploadInput.click());
+
+        afterImageUploadInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showLoading(true);
+            try {
+                const imageUrl = await uploadToCloudinary(file);
+                if (imageUrl) {
+                    const result = await callGasApi({ action: 'addAfterImage', id: currentRequestId, imageUrl: imageUrl, updaterName: currentUser.name });
+                    if (result) {
+                        showMessageModal('สำเร็จ', 'อัปเดต รูปภาพหลังแก้ไขสำเร็จ', 'success');
+                        const requestData = allRequests.find(r => r.id === currentRequestId);
+                        if (requestData) { requestData.afterImageUrl = imageUrl; populateDetailsModal(requestData); }
+                        await loadDashboardData();
+                    }
+                }
+            } catch (error) { showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการอัปโหลดรูปภาพหลังแก้ไข: ${error.message}`, 'error'); } 
+            finally { showLoading(false); }
+        });
+        
+        const handleFilter = (isRequesterView) => {
+            const problemInputId = isRequesterView ? 'requester-search-problem' : 'admin-search-problem';
+            const dateInputId = isRequesterView ? 'requester-search-date' : 'admin-search-date';
+            const categoryInputId = isRequesterView ? 'requester-search-category' : 'admin-search-category';
+            const problem = document.getElementById(problemInputId).value.toLowerCase();
+            const date = document.getElementById(dateInputId).value;
+            const category = document.getElementById(categoryInputId).value;
+            
+            let sourceData;
+            if (currentUser.isAdmin) {
+                sourceData = allRequests;
+            } else if (currentUser.isTechnician) {
+                sourceData = allRequests.filter(req => String(req.assignedToId) === String(currentUser.id));
+            } else {
+                sourceData = allRequests.filter(r => String(r.requesterId) === String(currentUser.id));
+            }
+
+            const filtered = sourceData.filter(req => {
+                const reqDate = req.date.split('T')[0]; 
+                return (problem ? req.problem.toLowerCase().includes(problem) : true) && 
+                       (date ? reqDate === date : true) && 
+                       (category ? req.category === category : true);
+            });
+            renderRequests(filtered, isRequesterView ? requesterList : adminList, currentUser);
+        };
+
+        adminFilterBtn.addEventListener('click', () => handleFilter(false));
+        requesterFilterBtn.addEventListener('click', () => handleFilter(true));
+        
+        confirmDeleteNoBtn.addEventListener('click', () => { setModalState(confirmDeleteModal, false); requestIdToDelete = null; });
+        confirmDeleteYesBtn.addEventListener('click', async () => {
+            if (!requestIdToDelete) return;
+            setModalState(confirmDeleteModal, false); 
+            showLoading(true);
+            try {
+                const result = await callGasApi({ action: 'deleteRequest', id: requestIdToDelete, currentUserId: currentUser.id });
+                if (result && result.success) { 
+                    showMessageModal('สำเร็จ', 'ลบรายการสำเร็จ', 'success'); 
+                    await loadDashboardData(); 
+                    if(!techDashboardModal.classList.contains('hidden')) {
+                        const activeTech = techDashboardList.querySelector('.bg-blue-100');
+                        if(activeTech) {
+                            activeTech.click();
+                        } else {
+                            showTechnicianDashboard();
+                        }
+                    }
+                }
+            } catch (error) { showMessageModal('ข้อผิดพลาด', `เกิดข้อผิดพลาดในการลบรายการ: ${error.message}`, 'error'); } 
+            finally { requestIdToDelete = null; showLoading(false); }
+        });
+
+        showRegisterModalBtn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            registerForm.reset(); 
+            registerError.textContent = ''; 
+            setModalState(registerModal, true);
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('register-full-name').value.trim();
+            const employeeId = document.getElementById('register-employee-id').value.trim();
+            const isTechnician = document.getElementById('register-as-technician').checked;
+            registerError.textContent = '';
+            if (!fullName || !employeeId) { registerError.textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน'; return; }
+            if (!/^\d{10}$/.test(employeeId)) { registerError.textContent = 'รหัสพนักงานต้องเป็นตัวเลข 10 หลัก'; return; }
+            
+            const submitBtn = e.submitter;
+            submitBtn.disabled = true; 
+            showLoading(true);
+            try {
+                const result = await callGasApi({ action: 'registerUser', name: fullName, employeeId: employeeId, isTechnician: isTechnician });
+                if (result && result.success) { 
+                    setModalState(registerModal, false); 
+                    showMessageModal('สำเร็จ', 'ลงทะเบียนสำเร็จ! สามารถใช้รหัสนี้เข้าสู่ระบบได้ทันที', 'success'); 
+                }
+            } catch (error) { 
+                registerError.textContent = error.message; 
+            } finally { 
+                showLoading(false); 
+                submitBtn.disabled = false; 
+            }
+        });
+
+        // --- Technician Dashboard Logic ---
+        function showTechnicianDashboard() {
+            setModalState(techDashboardModal, true);
+            techDashboardModal.classList.remove('mobile-details-active');
+            techDashboardList.innerHTML = '<p class="text-gray-500 p-4">กำลังโหลด...</p>';
+            showElement(techDashboardContent, false);
+            showElement(techDashboardPlaceholder, true);
+            lucide.createIcons();
+
+            callGasApi({ action: 'getTechnicians' }).then(techs => {
+                techDashboardList.innerHTML = '';
+                if (techs && techs.length > 0) {
+                    techs.forEach(tech => {
+                        techDashboardList.innerHTML += `
+                            <li>
+                                <a href="#" class="tech-item flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tech-id="${tech.id}" data-tech-name="${tech.name}">
+                                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center font-bold text-sm">${tech.name.charAt(0)}</span>
+                                    <span class="ml-3 font-medium text-gray-800 dark:text-gray-200">${tech.name}</span>
+                                </a>
+                            </li>
+                        `;
+                    });
+                } else {
+                    techDashboardList.innerHTML = '<p class="text-gray-500 p-4">ไม่พบข้อมูลช่าง/ผู้จัดการ</p>';
+                }
+            }).catch(error => {
+                techDashboardList.innerHTML = `<p class="text-red-500 p-4">เกิดข้อผิดพลาด: ${error.message}</p>`;
+            });
+        }
+
+        techDashboardListPanel.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const techItem = e.target.closest('.tech-item');
+            if (!techItem) return;
+
+            techDashboardModal.classList.add('mobile-details-active');
+            document.querySelectorAll('#tech-dashboard-list .tech-item').forEach(item => item.classList.remove('bg-blue-100', 'dark:bg-blue-900/50'));
+            techItem.classList.add('bg-blue-100', 'dark:bg-blue-900/50');
+
+            const techId = techItem.dataset.techId;
+            const techName = techItem.dataset.techName;
+
+            showElement(techDashboardPlaceholder, false);
+            showElement(techDashboardContent, true);
+            techDashboardName.textContent = `ภาพรวมของ: ${techName}`;
+            techDashboardRequests.innerHTML = '<p class="text-gray-500 col-span-full text-center py-12">กำลังโหลดข้อมูล...</p>';
+            
+            const summaryContainer = document.getElementById('tech-dashboard-summary');
+            summaryContainer.innerHTML = `
+                <div data-status="รอดำเนินการ" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-yellow-400 cursor-pointer">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">รอดำเนินการ</p>
+                    <p id="tech-summary-pending" class="text-3xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                </div>
+                <div data-status="กำลังดำเนินการ" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-blue-500 cursor-pointer">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">กำลังดำเนินการ</p>
+                    <p id="tech-summary-inprogress" class="text-3xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                </div>
+                <div data-status="ซ่อมเสร็จแล้ว" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-green-500 cursor-pointer">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">ซ่อมเสร็จแล้ว</p>
+                    <p id="tech-summary-completed" class="text-3xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                </div>
+                <div data-status="รออะไหล่/ยกเลิก" class="summary-card bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-l-4 border-red-500 cursor-pointer">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">รออะไหล่/ยกเลิก</p>
+                    <p id="tech-summary-cancelled" class="text-3xl font-bold text-gray-800 dark:text-white mt-2">0</p>
+                </div>
+            `;
+            
+            try {
+                const techRequests = allRequests.filter(req => String(req.assignedToId) === String(techId));
+                updateSummaryCards(techRequests, 'tech-summary');
+                renderRequests(techRequests, techDashboardRequests, currentUser);
+            } catch (error) {
+                techDashboardRequests.innerHTML = `<p class="text-red-500 col-span-full text-center py-12">เกิดข้อผิดพลาด: ${error.message}</p>`;
+            }
+        });
+        
+        // NEW: Event listener for filtering within the technician dashboard
+        techDashboardDetailsView.addEventListener('click', (e) => {
+            const summaryCard = e.target.closest('.summary-card');
+            if (!summaryCard) return;
+
+            const statusToFilter = summaryCard.dataset.status;
+            const activeTechItem = techDashboardList.querySelector('.bg-blue-100');
+            if (!activeTechItem) return;
+            
+            const techId = activeTechItem.dataset.techId;
+            const filteredRequests = allRequests.filter(req => 
+                String(req.assignedToId) === String(techId) && req.status === statusToFilter
+            );
+            renderRequests(filteredRequests, techDashboardRequests, currentUser);
+        });
+
+        techDashboardBackBtn.addEventListener('click', () => {
+            techDashboardModal.classList.remove('mobile-details-active');
+        });
+
+        showTechDashboardBtn.addEventListener('click', showTechnicianDashboard);
+
+        // --- Refresh Logic ---
+        if (desktopRefreshBtnRequester) {
+            desktopRefreshBtnRequester.addEventListener('click', () => loadDashboardData(true));
+        }
+        if (desktopRefreshBtnAdmin) {
+            desktopRefreshBtnAdmin.addEventListener('click', () => loadDashboardData(true));
+        }
+
+        // --- Mobile Button Logic ---
+        if (toggleAdminFiltersBtn) {
+            toggleAdminFiltersBtn.addEventListener('click', () => {
+                adminFiltersContainer.classList.toggle('hidden');
+            });
+        }
+
+        if (openRequestModalBtnAdminMobile) {
+            openRequestModalBtnAdminMobile.addEventListener('click', () => showNewRequestModal(true));
+        }
+        
+        if (showTechDashboardBtnMobile) {
+            showTechDashboardBtnMobile.addEventListener('click', showTechnicianDashboard);
+        }
+
+        if (toggleRequesterFiltersBtn) {
+            toggleRequesterFiltersBtn.addEventListener('click', () => {
+                requesterFiltersContainer.classList.toggle('hidden');
+            });
+        }
+
+        if (openRequestModalBtnRequesterMobile) {
+            openRequestModalBtnRequesterMobile.addEventListener('click', () => showNewRequestModal(true));
+        }
+
+
+        // --- Initial Load ---
+        (async () => {
+            const savedUserJSON = localStorage.getItem('currentUser');
+            if (savedUserJSON) {
+                showLoading(true);
+                const savedUser = JSON.parse(savedUserJSON);
+                await initializeUserSession(savedUser);
+                showLoading(false);
+            } else {
+                lucide.createIcons();
+            }
+        })();
+
+    </script>
+</body>
+</html>
