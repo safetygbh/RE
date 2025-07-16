@@ -1,9 +1,9 @@
 // Service Worker for FixFlow App (Debugging Version)
-console.log('Service Worker Loaded - v2.0 (Debug)');
+console.log('Service Worker Loaded - v3.0 (Debug)');
 
 // --- CACHE VERSION ---
 // Incrementing the version number is crucial for triggering the 'activate' event.
-const CACHE_NAME = 'RE-cache-v2.0'; 
+const CACHE_NAME = 'RE-cache-v3.0'; 
 const REPO_NAME = '/RE'; // << Your repository name on GitHub
 
 // A list of files to cache for the application shell.
