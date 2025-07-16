@@ -2,19 +2,19 @@
   "name": "ระบบแจ้งซ่อม",
   "short_name": "แจ้งซ่อม",
   "description": "เว็บแอปพลิเคชันสำหรับแจ้งซ่อมบำรุงภายในองค์กร",
-  "start_url": "/webput/index.html",
+  "start_url": "/RE/index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "/webput/icon-192.png",
+      "src": "/RE/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/webput/icon-512.png",
+      "src": "/RE/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
