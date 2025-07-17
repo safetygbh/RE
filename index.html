@@ -154,6 +154,9 @@
                     </button>
                 </form>
                 <p id="login-error" class="text-red-500 text-sm mt-4 text-center h-5"></p>
+                <div class="text-center mt-4 hidden">
+                    <a href="#" id="show-register-modal-btn" class="text-sm text-blue-600 hover:underline dark:text-blue-400">ยังไม่เคยใช้งาน? ลงทะเบียนที่นี่</a>
+                </div>
             </div>
              <div class="absolute top-4 right-4">
                 <button id="theme-toggle-login" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -296,7 +299,7 @@
                                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
                                 กลับไปแดชบอร์ด
                             </button>
-                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">รายการแจ้งของคุณ</h2>
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">รายการแจ้งปัญหาของคุณ</h2>
                             <button id="desktop-refresh-btn-requester" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="รีเฟรชรายการ">
                                 <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                             </button>
@@ -634,11 +637,12 @@
         // =================================================================================
         // CONFIGURATION
         // =================================================================================
-         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxDFrcak-44cf8NmVUC-msT3D3gHLNc7FYowvJ_25qBVMVnWqr75xRIHvTSEQPZFewx/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxDFrcak-44cf8NmVUC-msT3D3gHLNc7FYowvJ_25qBVMVnWqr75xRIHvTSEQPZFewx/exec";
         const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dwa3hxmf6/image/upload";
         const CLOUDINARY_UPLOAD_PRESET = "SafetyRE";
         const BACKEND_SERVER_URL = "https://re-l1qo.onrender.com";
         const VAPID_PUBLIC_KEY = "BLqqcvvk8fxGW7u8kqbAQoQGRj4ZQlTvKNkdAtMApFP4FwUNiXjg8YeB_B3KxXfbEJwWIZQO7nSZaKUMQRQWJGM";
+
 
 
         // =================================================================================
@@ -1076,8 +1080,15 @@
                     renderRequests(myReportedRequests, requesterList, currentUser);
 
                     if (currentUser.isAdmin || currentUser.isTechnician) {
-                        updateSummaryCards(allRequests);
-                        renderRequests(allRequests, adminList, currentUser);
+                        let requestsForDashboard = allRequests;
+                        // For a non-admin technician, their dashboard should only show work assigned to them.
+                        if (currentUser.isTechnician && !currentUser.isAdmin) {
+                            requestsForDashboard = allRequests.filter(req => String(req.assignedToId) === String(currentUser.id));
+                        }
+                        
+                        // Use the filtered list for both the summary cards and the request list on the dashboard.
+                        updateSummaryCards(requestsForDashboard);
+                        renderRequests(requestsForDashboard, adminList, currentUser);
                     }
                 }
             } catch(error) {
@@ -1441,12 +1452,12 @@
             finally { requestIdToDelete = null; showLoading(false); }
         });
 
-        showRegisterModalBtn.addEventListener('click', (e) => {
-            e.preventDefault(); 
-            registerForm.reset(); 
-            registerError.textContent = ''; 
-            setModalState(registerModal, true);
-        });
+        // showRegisterModalBtn.addEventListener('click', (e) => {
+        //     e.preventDefault(); 
+        //     registerForm.reset(); 
+        //     registerError.textContent = ''; 
+        //     setModalState(registerModal, true);
+        // });
 
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
